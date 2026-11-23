@@ -1,0 +1,27 @@
+name: login
+image: {repository: ghcr.io/xdew-cloud/login, tag: 2.0.0}
+resources: {requests: {cpu: 25m, memory: 192Mi}, limits: {memory: 512Mi}}
+strategy: {maxUnavailable: 1, maxSurge: 1}
+probes:
+  readiness: {initialDelaySeconds: 5, periodSeconds: 10, timeoutSeconds: null}
+  liveness: {initialDelaySeconds: 15, periodSeconds: 10, timeoutSeconds: null}
+ingress:
+  host: login.xdew.cloud
+  # Kratos's own path prefixes, routed straight to kratos-public so its flow/CSRF cookies land on this host
+  # (they must be readable on every request the login UI makes to Kratos). Traefik matches the longest prefix.
+  extraPaths:
+    - {path: /self-service, service: kratos-public, port: 80}
+    - {path: /sessions, service: kratos-public, port: 80}
+    - {path: /schemas, service: kratos-public, port: 80}
+    - {path: /.well-known, service: kratos-public, port: 80}
+env:
+  - {name: PORT, value: "3000"}
+  # Must be login's own host, not Kratos's auth.xdew.cloud: the flow cookie is scoped to this host.
+  - {name: NEXT_PUBLIC_ORY_SDK_URL, value: "https://login.xdew.cloud"}
+  - {name: NEXT_PUBLIC_ORY_ACCOUNT_URL, value: "https://account.xdew.cloud"}
+  - {name: HYDRA_ADMIN_URL, value: "http://hydra-admin.system-identity-apps.svc.cluster.local:4445"}
+  - {name: KETO_READ_URL, value: "http://keto-read.system-identity-apps.svc.cluster.local:80"}
+  - {name: KRATOS_ADMIN_URL, value: "http://kratos-admin.system-identity-apps.svc.cluster.local:80"}
+  # Same secret/key as hydra's OAUTH2_TOKEN_HOOK_AUTH_CONFIG_VALUE: both sides of the webhook auth must agree.
+  - name: TOKEN_HOOK_API_KEY
+    valueFrom: {secretKeyRef: {name: hydra-secrets, key: tokenHookApiKey}}

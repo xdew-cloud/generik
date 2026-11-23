@@ -1,0 +1,26 @@
+name: explore
+image: {repository: ghcr.io/xdew-cloud/explore, tag: 0.1.0}
+ingress: {host: explore.xdew.cloud}
+secrets: true
+serviceAccount: {create: true}
+rbac:
+  clusterRules:
+    # Impersonate the authenticated user for every K8s object read/write, so native RBAC enforces
+    # per-user access instead of this ServiceAccount's own identity.
+    - apiGroups: [""]
+      resources: ["users", "groups"]
+      verbs: ["impersonate"]
+    # Discovery only, with this ServiceAccount's own identity: which namespaces exist, and in which
+    # ones the current user has a workspace-access RoleBinding.
+    - apiGroups: [""]
+      resources: ["namespaces"]
+      verbs: ["get", "list", "watch"]
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      resources: ["rolebindings"]
+      verbs: ["get", "list", "watch"]
+env:
+  - {name: AUTH_URL, value: "https://explore.xdew.cloud"}
+  - {name: IDENTITY_ISSUER, value: "https://auth.xdew.cloud"}
+oauth2:
+  enabled: true
+  clientName: Explore
