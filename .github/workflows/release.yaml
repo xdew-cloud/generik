@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    name: Lint
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_lint.yaml
+
+  detect-version:
+    name: Detect version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      should_release: ${{ steps.detect.outputs.release_exist == 'false' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Detect version
+        id: detect
+        uses: dwesh163/actions/detect-version@137d796e679f991d22280478fa587d17f4fc148e # main
+        with:
+          type: file
+          path: .version
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Package and push
+    needs: [lint, detect-version]
+    if: needs.detect-version.outputs.should_release == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/_build.yaml
+    with:
+      version: ${{ needs.detect-version.outputs.version }}
+
+  create-release:
+    name: Create release
+    needs: [detect-version, build]
+    if: needs.build.outputs.build_success == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create release
+        uses: dwesh163/actions/release@137d796e679f991d22280478fa587d17f4fc148e # main
+        with:
+          version: ${{ needs.detect-version.outputs.version }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
