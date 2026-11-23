@@ -1,0 +1,75 @@
+# Object names (Deployment, Service, Ingress, ...). Defaults to the release name.
+name: ""
+
+image:
+  repository: ""
+  # Required: the tag is explicit, there is no chart appVersion to fall back on.
+  tag: ""
+  pullPolicy: Always
+
+# Name of an existing dockerconfigjson Secret in the release namespace.
+imagePullSecret: pull-secret
+
+replicas: 1
+
+# Container port, named "http". The Service exposes it on port 80.
+port: 3000
+
+# Extra settings of the rolling update (maxUnavailable, maxSurge). Empty keeps the Kubernetes defaults.
+strategy: {}
+
+# TCP probes on the "http" port. Every key is passed as is; set a key to null to remove a default.
+probes:
+  readiness:
+    initialDelaySeconds: 10
+    timeoutSeconds: 5
+  liveness:
+    initialDelaySeconds: 15
+    timeoutSeconds: 5
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 128Mi
+  limits:
+    memory: 256Mi
+
+# Environment variables, in Kubernetes syntax (name + value, or name + valueFrom).
+# CLIENT_ID and CLIENT_SECRET are appended when oauth2.enabled is true.
+env: []
+
+# true: the container reads <name>-secrets (envFrom). The SopsSecret itself is not part of this chart:
+# it is a file next to the App.
+secrets: false
+
+serviceAccount:
+  create: false
+
+rbac:
+  # Rules of a ClusterRole bound to the ServiceAccount (needs serviceAccount.create).
+  clusterRules: []
+
+ingress:
+  host: ""
+  # More hosts for the same Service: each one gets a TLS host, a rule and a DNS record.
+  extraHosts: []
+  className: traefik
+  clusterIssuer: xdew-cloudflare
+  # Paths of the main host routed to another Service before "/": [{path, service, port}].
+  extraPaths: []
+
+# Cloudflare DNS record (cloudflare-operator) for each host.
+dns:
+  enabled: true
+  target: origin.xdew.cloud
+  proxied: true
+
+# Ory Hydra OAuth2 client; its credentials land in <name>-client-secrets.
+oauth2:
+  enabled: false
+  clientName: ""
+  audience: ""
+  scope: "openid email profile groups offline_access"
+  # Redirect URIs are https://<ingress.host><path>.
+  redirectPaths:
+    - /api/auth/callback/hydra

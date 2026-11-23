@@ -1,0 +1,28 @@
+{{- if .Values.oauth2.enabled }}
+apiVersion: hydra.ory.sh/v1alpha1
+kind: OAuth2Client
+metadata:
+  name: {{ include "generik.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "generik.labels" . | nindent 4 }}
+spec:
+  clientName: {{ .Values.oauth2.clientName | quote }}
+  grantTypes:
+    - authorization_code
+    - refresh_token
+  responseTypes:
+    - code
+  scope: {{ .Values.oauth2.scope | quote }}
+  {{- if .Values.oauth2.audience }}
+  audience:
+    - {{ .Values.oauth2.audience | quote }}
+  {{- end }}
+  redirectUris:
+    {{- range .Values.oauth2.redirectPaths }}
+    - https://{{ $.Values.ingress.host }}{{ . }}
+    {{- end }}
+  tokenEndpointAuthMethod: client_secret_basic
+  secretName: {{ include "generik.name" . }}-client-secrets
+  skipConsent: true
+{{- end }}

@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["image", "ingress"],
+  "properties": {
+    "name": {"type": "string"},
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "tag"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "tag": {"type": "string", "minLength": 1},
+        "pullPolicy": {"type": "string", "enum": ["Always", "IfNotPresent", "Never"]}
+      }
+    },
+    "imagePullSecret": {"type": "string"},
+    "replicas": {"type": "integer", "minimum": 0},
+    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
+    "strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxUnavailable": {"type": ["integer", "string"]},
+        "maxSurge": {"type": ["integer", "string"]}
+      }
+    },
+    "probes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "readiness": {"type": "object"},
+        "liveness": {"type": "object"}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requests": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cpu", "memory"],
+          "properties": {"cpu": {"type": "string"}, "memory": {"type": "string"}}
+        },
+        "limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["memory"],
+          "properties": {"memory": {"type": "string"}}
+        }
+      }
+    },
+    "env": {
+      "type": "array",
+      "items": {"type": "object", "required": ["name"]}
+    },
+    "secrets": {"type": "boolean"},
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"create": {"type": "boolean"}}
+    },
+    "rbac": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"clusterRules": {"type": "array", "items": {"type": "object"}}}
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host"],
+      "properties": {
+        "host": {"type": "string", "minLength": 1},
+        "extraHosts": {"type": "array", "items": {"type": "string"}},
+        "className": {"type": "string"},
+        "clusterIssuer": {"type": "string"},
+        "extraPaths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "service", "port"],
+            "properties": {
+              "path": {"type": "string"},
+              "service": {"type": "string"},
+              "port": {"type": "integer"}
+            }
+          }
+        }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "target": {"type": "string"},
+        "proxied": {"type": "boolean"}
+      }
+    },
+    "oauth2": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "clientName": {"type": "string"},
+        "audience": {"type": "string"},
+        "scope": {"type": "string"},
+        "redirectPaths": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

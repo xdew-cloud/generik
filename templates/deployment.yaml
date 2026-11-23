@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "generik.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "generik.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: RollingUpdate
+    {{- with .Values.strategy }}
+    rollingUpdate:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "generik.name" . }}
+  template:
+    metadata:
+      labels:
+        {{- include "generik.labels" . | nindent 8 }}
+    spec:
+      {{- if .Values.serviceAccount.create }}
+      serviceAccountName: {{ include "generik.name" . }}
+      {{- end }}
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecret }}
+      containers:
+        - name: {{ include "generik.name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+          {{- if or .Values.env .Values.oauth2.enabled }}
+          env:
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.oauth2.enabled }}
+            - name: CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "generik.name" . }}-client-secrets
+                  key: CLIENT_ID
+            - name: CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "generik.name" . }}-client-secrets
+                  key: CLIENT_SECRET
+            {{- end }}
+          {{- end }}
+          {{- if .Values.secrets }}
+          envFrom:
+            - secretRef:
+                name: {{ include "generik.name" . }}-secrets
+          {{- end }}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              memory: {{ .Values.resources.limits.memory }}
+          readinessProbe:
+            tcpSocket:
+              port: http
+            {{- toYaml .Values.probes.readiness | nindent 12 }}
+          livenessProbe:
+            tcpSocket:
+              port: http
+            {{- toYaml .Values.probes.liveness | nindent 12 }}

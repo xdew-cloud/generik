@@ -1,0 +1,19 @@
+{{- if .Values.dns.enabled }}
+{{- range $i, $host := concat (list .Values.ingress.host) .Values.ingress.extraHosts }}
+{{- if $i }}
+---
+{{- end }}
+apiVersion: cloudflare-operator.io/v1
+kind: DNSRecord
+metadata:
+  name: {{ $host | replace "." "-" }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "generik.labels" $ | nindent 4 }}
+spec:
+  name: {{ $host }}
+  type: CNAME
+  content: {{ $.Values.dns.target }}
+  proxied: {{ $.Values.dns.proxied }}
+{{- end }}
+{{- end }}
