@@ -50,7 +50,14 @@ jobs:
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::invalid version"; exit 1; }
           OWNER=$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')
           helm package . --version "$VERSION" --destination dist
-          helm push "dist/generik-${VERSION}.tgz" "oci://ghcr.io/${OWNER}"
+          # The first push of a new GHCR package can fail to tag the manifest it just uploaded
+          # (seen on 0.1.0: "failed to perform Tag ... not found"); a second attempt succeeds.
+          for attempt in 1 2 3; do
+            helm push "dist/generik-${VERSION}.tgz" "oci://ghcr.io/${OWNER}" && break
+            [ "$attempt" -lt 3 ] || exit 1
+            echo "::warning::helm push failed (attempt ${attempt}), retrying"
+            sleep 15
+          done
 
       - name: Mark success
         id: done
