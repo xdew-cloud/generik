@@ -1,5 +1,5 @@
 {{- $name := include "generik.name" . }}
-{{- $hosts := concat (list .Values.ingress.host) .Values.ingress.extraHosts }}
+{{- $hosts := include "generik.sharedHosts" . | fromJsonArray }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

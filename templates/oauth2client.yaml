@@ -9,20 +9,25 @@ metadata:
 spec:
   clientName: {{ .Values.oauth2.clientName | quote }}
   grantTypes:
-    - authorization_code
-    - refresh_token
+    {{- toYaml .Values.oauth2.grantTypes | nindent 4 }}
+  {{- with .Values.oauth2.responseTypes }}
   responseTypes:
-    - code
-  scope: {{ .Values.oauth2.scope | quote }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.oauth2.scope }}
+  scope: {{ . | quote }}
+  {{- end }}
   {{- if .Values.oauth2.audience }}
   audience:
     - {{ .Values.oauth2.audience | quote }}
   {{- end }}
+  {{- with .Values.oauth2.redirectPaths }}
   redirectUris:
-    {{- range .Values.oauth2.redirectPaths }}
+    {{- range . }}
     - https://{{ $.Values.ingress.host }}{{ . }}
     {{- end }}
-  tokenEndpointAuthMethod: client_secret_basic
+  {{- end }}
+  tokenEndpointAuthMethod: {{ .Values.oauth2.tokenEndpointAuthMethod }}
   secretName: {{ include "generik.name" . }}-client-secrets
   skipConsent: true
 {{- end }}
