@@ -1,0 +1,18 @@
+# A worker that inherits everything it does not say, a Recreate app, and a rolling update that stops at zero.
+name: jobs
+image: {repository: ghcr.io/example/jobs, tag: 2.0.0}
+ingress: {host: jobs.example.org}
+strategy: {type: Recreate, maxUnavailable: 0}
+service: {port: 8080}
+components:
+  worker:
+    env: [{name: MODE, value: worker}]
+  queue:
+    image: {repository: redis, tag: 7-alpine}
+    port: 6379
+    portName: redis
+    service: {port: 6379}
+    strategy: {maxUnavailable: 0, maxSurge: 0}
+  internal:
+    service: {enabled: false}
+    replicas: 0

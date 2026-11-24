@@ -1,0 +1,9 @@
+# Several hosts: a shared one, a rewrite that strips a prefix, a rewrite by regular expression.
+name: shop
+image: {repository: ghcr.io/example/shop, tag: 1.0.0}
+ingress:
+  host: shop.example.org
+  extraHosts:
+    - www.shop.example.org
+    - {host: api.shop.example.org, name: api, middleware: {stripPrefix: {prefixes: [/api]}}}
+    - {host: old.shop.example.org, middleware: {replacePathRegex: {regex: "^/v1/(.*)", replacement: "/$1"}}}

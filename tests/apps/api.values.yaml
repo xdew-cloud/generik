@@ -1,0 +1,92 @@
+name: api
+image: {repository: ghcr.io/xdew-cloud/api, tag: 3.5.0}
+service: {port: 3000}
+resources:
+  requests: {cpu: 50m, memory: 128Mi}
+  limits: {memory: 256Mi}
+serviceAccount: {create: true}
+rbac:
+  clusterRules:
+  - apiGroups: [xdew.cloud]
+    resources: [organizations, projects, workspaces, apps]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [storage.xdew.cloud]
+    resources: [disks]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [identity.xdew.cloud]
+    resources: [systemroles, organizationroles, projectroles]
+    verbs: [get, list, watch]
+  - apiGroups: [identity.xdew.cloud]
+    resources: [users]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [identity.xdew.cloud]
+    resources: [serviceaccounts]
+    verbs: [get, list, create, patch, delete]
+  - apiGroups: [xdew.cloud]
+    resources: [logs]
+    verbs: [get, list, watch]
+  - apiGroups: ['']
+    resources: [nodes]
+    verbs: [get, list, watch]
+  - apiGroups: [metrics.k8s.io]
+    resources: [nodes]
+    verbs: [get, list]
+  - apiGroups: ['']
+    resources: [secrets]
+    verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [argoproj.io]
+    resources: [applications]
+    verbs: [get, patch]
+  - apiGroups: ['']
+    resources: [pods, events]
+    verbs: [get, list]
+  - apiGroups: ['']
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [apps]
+    resources: [replicasets, statefulsets, daemonsets]
+    verbs: [get, list]
+  - apiGroups: [batch]
+    resources: [jobs]
+    verbs: [get, list]
+  - apiGroups: [networking.k8s.io]
+    resources: [ingresses]
+    verbs: [get, list, watch]
+  - apiGroups: ['']
+    resources: [resourcequotas]
+    verbs: [get, list]
+  - apiGroups: ['']
+    resources: [persistentvolumeclaims]
+    verbs: [get, list]
+  - apiGroups: [longhorn.io]
+    resources: [volumes]
+    verbs: [get, list]
+  - apiGroups: [hydra.ory.sh]
+    resources: [oauth2clients]
+    verbs: [get, list]
+env:
+- {name: NODE_ENV, value: production}
+- {name: HYDRA_ADMIN_URL, value: 'http://hydra-admin.system-identity-apps.svc.cluster.local:4445'}
+- {name: KETO_READ_URL, value: 'http://keto-read.system-identity-apps.svc.cluster.local:80'}
+- {name: USER_SA_NAMESPACE, value: system-identity-operators}
+- {name: PROMETHEUS_URL, value: 'http://obs-prometheus.system-operators-observability.svc.cluster.local:9090'}
+- {name: HYDRA_AUDIENCE, value: api}
+- {name: HYDRA_AUDIENCE_ENFORCE, value: log}
+ingress:
+  host: api.xdew.cloud
+  extraHosts:
+  - host: webhook.xdew.cloud
+    name: webhook
+    middleware:
+      addPrefix: {prefix: /webhook}
+dns: {target: origin.xdew.cloud, proxied: true}
+oauth2:
+  enabled: true
+  clientName: API
+  scope: ''
+  grantTypes: [client_credentials]
+  responseTypes: []
+  redirectPaths: []
+  tokenEndpointAuthMethod: client_secret_basic
+  clientIdEnv: HYDRA_API_CLIENT_ID
+  clientSecretEnv: HYDRA_API_CLIENT_SECRET
