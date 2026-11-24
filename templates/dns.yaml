@@ -1,5 +1,5 @@
 {{- if .Values.dns.enabled }}
-{{- range $i, $host := concat (list .Values.ingress.host) .Values.ingress.extraHosts }}
+{{- range $i, $host := (include "generik.hosts" . | fromJsonArray) }}
 {{- if $i }}
 ---
 {{- end }}

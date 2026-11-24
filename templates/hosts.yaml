@@ -1,0 +1,52 @@
+{{- /*
+  An extra host that has a middleware (ingress.extraHosts: [{host, name, middleware}]) gets its own Traefik Middleware,
+  its own Ingress and its own certificate, named <name>-<slug>, where slug is `name` of the entry or the host with its
+  dots as hyphens. The middleware is the `spec` of a Traefik Middleware as is (addPrefix, stripPrefix,
+  replacePathRegex, headers...). The other extra hosts share the Ingress of the app.
+*/ -}}
+{{- $root := . }}
+{{- $name := include "generik.name" . }}
+{{- range .Values.ingress.extraHosts }}
+{{- if and (kindIs "map" .) .middleware }}
+{{- $res := printf "%s-%s" $name (.name | default (.host | replace "." "-")) }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $res }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "generik.labels" $root | nindent 4 }}
+spec:
+  {{- toYaml .middleware | nindent 2 }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $res }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "generik.labels" $root | nindent 4 }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ $root.Values.ingress.clusterIssuer }}
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: {{ $root.Release.Namespace }}-{{ $res }}@kubernetescrd
+spec:
+  ingressClassName: {{ $root.Values.ingress.className }}
+  tls:
+    - hosts: [{{ .host }}]
+      secretName: {{ $res }}-tls
+  rules:
+    - host: {{ .host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $name }}
+                port:
+                  name: http
+{{- end }}
+{{- end }}

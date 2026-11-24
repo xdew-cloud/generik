@@ -1,0 +1,34 @@
+{{- /*
+  The other Deployments of the app (a worker, a cache), each with its own Service. They are named <name>-<component>,
+  carry app.kubernetes.io/component, and are meant to be called by the app or routed to by ingress.extraPaths.
+*/ -}}
+{{- $root := . }}
+{{- range $key, $c := .Values.components }}
+{{- $name := printf "%s-%s" (include "generik.name" $root) $key }}
+{{- $portName := dig "portName" "http" $c }}
+{{- $port := dig "port" 3000 $c }}
+{{- $ready := dict "initialDelaySeconds" 10 "timeoutSeconds" 5 }}
+{{- range $k, $val := (dig "probes" "readiness" dict $c) }}{{- $_ := set $ready $k $val }}{{- end }}
+{{- $live := dict "initialDelaySeconds" 15 "timeoutSeconds" 5 }}
+{{- range $k, $val := (dig "probes" "liveness" dict $c) }}{{- $_ := set $live $k $val }}{{- end }}
+{{- $w := dict
+    "image" (dict "repository" (dig "image" "repository" $root.Values.image.repository $c) "tag" (dig "image" "tag" $root.Values.image.tag $c) "pullPolicy" (dig "image" "pullPolicy" $root.Values.image.pullPolicy $c))
+    "replicas" (dig "replicas" 1 $c)
+    "port" $port
+    "portName" $portName
+    "strategy" (dig "strategy" dict $c)
+    "probes" (dict "readiness" $ready "liveness" $live)
+    "resources" (dict "requests" (dict "cpu" (dig "resources" "requests" "cpu" "25m" $c) "memory" (dig "resources" "requests" "memory" "128Mi" $c)) "limits" (dict "memory" (dig "resources" "limits" "memory" "256Mi" $c)))
+    "imagePullSecret" (dig "imagePullSecret" $root.Values.imagePullSecret $c)
+    "podSecurityContext" (dig "podSecurityContext" dict $c)
+    "volumes" (dig "volumes" list $c)
+    "volumeMounts" (dig "volumeMounts" list $c)
+    "command" (dig "command" list $c)
+    "args" (dig "args" list $c) }}
+---
+{{ include "generik.deployment" (dict "root" $root "name" $name "container" $key "component" $key "selectByComponent" true "serviceAccount" false "secrets" (dig "secrets" false $c) "env" (dig "env" list $c) "w" $w) }}
+{{- if dig "service" "enabled" true $c }}
+---
+{{ include "generik.service" (dict "root" $root "name" $name "component" $key "version" $w.image.tag "portName" $portName "port" (dig "service" "port" 80 $c)) }}
+{{- end }}
+{{- end }}

@@ -1,15 +1,2 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ include "generik.name" . }}
-  namespace: {{ .Release.Namespace }}
-  labels:
-    {{- include "generik.labels" . | nindent 4 }}
-spec:
-  selector:
-    app.kubernetes.io/name: {{ include "generik.name" . }}
-  ports:
-    - name: http
-      protocol: TCP
-      port: 80
-      targetPort: http
+{{- $component := ternary "web" "" (not (empty .Values.components)) }}
+{{ include "generik.service" (dict "root" . "name" (include "generik.name" .) "component" $component "version" .Values.image.tag "portName" "http" "port" .Values.service.port) }}
