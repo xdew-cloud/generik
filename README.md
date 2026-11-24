@@ -157,7 +157,7 @@ The `api` of the platform does exactly this for its GitHub App (the Secret is a 
 
 ## What is not in the chart
 
-- **The `SopsSecret`.** It carries its own `sops:` block, with a MAC computed on the whole file, so it does not fit inside values. It is a plain file next to the `App` in `manifests` (`deploy/<group>/<name>/secrets.sops.yaml`).
+- **The `SopsSecret`.** It carries its own `sops:` block, with a MAC computed on the whole file, so it does not fit inside values. It is a plain file next to the `App` in `manifests` (`deploy/<group>/<name>/secrets.yaml`).
 - **Objects specific to one app** (Traefik IngressRoutes and Middlewares that are not a host rewrite, database clusters, policies): plain YAML in the same directory. There is no `extraObjects`: it would bypass the Steward's admission rules.
 
 ## Parity with the old charts
