@@ -26,7 +26,7 @@ jobs:
       - name: Lint and render every test app
         run: |
           set -euo pipefail
-          for values in tests/apps/*.values.yaml; do
+          for values in tests/apps/*.values.yaml tests/cases/*.values.yaml; do
             helm lint . -f "$values"
             helm template ci . -f "$values" > /dev/null
           done
