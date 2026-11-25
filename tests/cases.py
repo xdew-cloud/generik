@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Render the cases of tests/cases and check what the old charts do not show: several hosts with their own middleware,
-components, and the strategy.
+components, the strategy, and settings read from another Secret.
 
 usage: cases.py
 """
@@ -70,5 +70,16 @@ check("Recreate carries no rollingUpdate, a rolling update keeps a zero",
       and queue["spec"]["strategy"] == {"type": "RollingUpdate", "rollingUpdate": {"maxSurge": 0, "maxUnavailable": 0}})
 check("the Service of the app listens on service.port",
       c[("Service", "jobs")]["spec"]["ports"][0]["port"] == 8080)
+
+b = render("secretenv")
+env = b[("Deployment", "bridge")]["spec"]["template"]["spec"]["containers"][0]["env"]
+check("env passes a key of another Secret, optional, and keeps the order",
+      [e["name"] for e in env] == ["MODE", "APP_ID", "APP_KEY", "RESYNC_SECONDS"]
+      and env[1]["valueFrom"] == {"secretKeyRef": {"name": "bridge-app", "key": "appId", "optional": True}}
+      and env[3] == {"name": "RESYNC_SECONDS", "value": "3600"})
+check("the rules of the ClusterRole reach a resource and its status, in the order given",
+      [(r["resources"], r["verbs"]) for r in b[("ClusterRole", "bridge")]["rules"]]
+      == [(["versions"], ["get", "list", "create", "delete"]), (["versions/status"], ["get", "patch"])]
+      and b[("ClusterRoleBinding", "bridge")]["subjects"][0]["name"] == "bridge")
 
 sys.exit(1 if failed else 0)
