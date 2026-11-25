@@ -1,61 +1,51 @@
-# Object names (Deployment, Service, Ingress, ...). Defaults to the release name.
+# Object names (Ingress, OAuth2 client, ServiceAccount, ...) and the name of the app. Defaults to the release name.
 name: ""
 
-image:
-  repository: ""
-  # Required: the tag is explicit, there is no chart appVersion to fall back on.
-  tag: ""
-  pullPolicy: Always
-
-# Name of an existing dockerconfigjson Secret in the release namespace. Empty: no imagePullSecrets (a public image).
-imagePullSecret: pull-secret
-
-replicas: 1
-
-# Container port, named "http".
-port: 3000
-
-service:
-  # The port of the Service, which targets the container's "http" port.
-  port: 80
-
-# type: RollingUpdate (default) or Recreate (an app that holds a ReadWriteOnce volume). maxUnavailable and maxSurge
-# are the settings of a rolling update; empty keeps the Kubernetes defaults.
-strategy: {}
-
-# What the container runs instead of its image's entrypoint, and its arguments. Empty keeps the image's.
-command: []
-args: []
-
-# Pod security context (fsGroup...), and volumes with their mounts, in Kubernetes syntax. The volume's objects
-# (a PersistentVolumeClaim) are files next to the App, not part of this chart.
-podSecurityContext: {}
-volumes: []
-volumeMounts: []
-
-# TCP probes on the "http" port. Every key is passed as is; set a key to null to remove a default.
-probes:
-  readiness:
-    initialDelaySeconds: 10
-    timeoutSeconds: 5
-  liveness:
-    initialDelaySeconds: 15
-    timeoutSeconds: 5
-
-resources:
-  requests:
-    cpu: 25m
-    memory: 128Mi
-  limits:
-    memory: 256Mi
-
-# Environment variables, in Kubernetes syntax (name + value, or name + valueFrom).
-# CLIENT_ID and CLIENT_SECRET are appended when oauth2.enabled is true.
-env: []
-
-# true: the container reads <name>-secrets (envFrom). The SopsSecret itself is not part of this chart:
-# it is a file next to the App.
-secrets: false
+# The Deployments of the app, each with its own Service. The first one is the app: the Ingress, the OAuth2 client and
+# the ServiceAccount are its. An entry with no `name` is called <name>, one named x is called <name>-x, so a
+# one-entry app is `api`, not `api-api`. At most one entry has no name, and the names are unique.
+#
+# A simple app:
+#   deployments:
+#     - image: {repository: ghcr.io/example/www, tag: 1.2.0}
+#
+# An app with a worker and a cache (the first entry has no name, it is `docs`; the others are docs-worker and docs-redis):
+#   deployments:
+#     - image: {repository: ghcr.io/example/docs, tag: 1.10.1}
+#       secrets: true
+#       volumes:
+#         - {name: uploads, mountPath: /data, claim: {name: docs-uploads, size: 10Gi, storageClass: xdew-storage}}
+#     - name: worker                     # takes the image of the first entry
+#       env: [{name: SERVICES, value: worker}]
+#     - name: redis
+#       image: {repository: redis, tag: 7-alpine, pullPolicy: IfNotPresent}
+#       imagePullSecret: ""
+#       port: 6379
+#       portName: redis
+#       service: {port: 6379}
+#
+# Every key of an entry is optional but `image` on the first one. Defaults in brackets.
+#   name                 see above
+#   image                {repository, tag, pullPolicy [Always]}; an entry that has one takes it whole, the others take
+#                        the first entry's. The tag is explicit, there is no chart appVersion to fall back on.
+#   imagePullSecret      [pull-secret] name of an existing dockerconfigjson Secret; "" for a public image; the
+#                        others take the first entry's
+#   replicas [1], port [3000], portName [http]   the port of the container and its name
+#   service              {enabled [true], port [80]} the Service of the entry, which targets portName
+#   strategy             {type [RollingUpdate] or Recreate (a ReadWriteOnce volume), maxUnavailable, maxSurge}
+#   command, args        what the container runs instead of its image's entrypoint
+#   podSecurityContext   fsGroup...
+#   probes               {readiness: {initialDelaySeconds [10], timeoutSeconds [5]}, liveness: {[15], [5]}}: TCP
+#                        probes on portName; every key is passed as is; a key set to null removes its default
+#   resources            {requests: {cpu [25m], memory [128Mi]}, limits: {memory [256Mi]}}
+#   env                  Kubernetes syntax (name + value, or name + valueFrom); the first entry gets the OAuth2
+#                        client's id and secret when oauth2.enabled is true
+#   secrets              [false] true: the container reads the Secret <name>-secrets (envFrom). The SopsSecret itself
+#                        is not part of this chart: it is a file next to the App
+#   volumes              Kubernetes volumes, with `mountPath` (and `subPath`, `readOnly`) for the mount, and `claim`
+#                        {name [<object>-<volume>], size, storageClass, accessModes [ReadWriteOnce]} for a
+#                        PersistentVolumeClaim that this chart renders and keeps (see the README)
+deployments: []
 
 serviceAccount:
   create: false
@@ -66,7 +56,7 @@ rbac:
 
 ingress:
   host: ""
-  # More hosts for the same Service. A string joins the Ingress of the app: a TLS host, a rule and a DNS record.
+  # More hosts for the app. A string joins the Ingress of the app: a TLS host, a rule and a DNS record.
   # An object {host, name, middleware} gets its own Ingress, certificate and Traefik Middleware, for a host that
   # rewrites the path (middleware is the spec of the Middleware as is):
   #   - {host: webhook.example.org, name: webhook, middleware: {addPrefix: {prefix: /webhook}}}
@@ -74,7 +64,8 @@ ingress:
   extraHosts: []
   className: traefik
   clusterIssuer: xdew-cloudflare
-  # Paths of the main host routed to another Service before "/": [{path, service, port}].
+  # Paths of the main host routed to another Service before "/": [{path, service, port}]. `service` is the `name` of
+  # an entry of `deployments`, or the name of any other Service.
   extraPaths: []
 
 # Cloudflare DNS record (cloudflare-operator) for each host.
@@ -95,38 +86,9 @@ oauth2:
   grantTypes: [authorization_code, refresh_token]
   responseTypes: [code]
   tokenEndpointAuthMethod: client_secret_basic
-  # The environment variables of the container that carry the id and the secret of the client.
+  # The environment variables of the first entry that carry the id and the secret of the client.
   clientIdEnv: CLIENT_ID
   clientSecretEnv: CLIENT_SECRET
   # Redirect URIs are https://<ingress.host><path>.
   redirectPaths:
     - /api/auth/callback/hydra
-
-# More Deployments for the same app, each with its own Service (a worker, a cache). A component is named
-# <name>-<component> and is reached at http://<name>-<component>:<service.port>. Every key is optional: the image
-# is the app's unless it says otherwise, `env` and the rest are the component's own, and `secrets: true` reads the
-# app's <name>-secrets. When there are components, the app's pods carry app.kubernetes.io/component: web.
-#
-#   components:
-#     collaboration:
-#       replicas: 1
-#       port: 3000
-#       env: [{name: SERVICES, value: collaboration}]
-#       secrets: true
-#     redis:
-#       image: {repository: redis, tag: 7-alpine, pullPolicy: IfNotPresent}
-#       imagePullSecret: ""
-#       port: 6379
-#       portName: redis
-#       service: {port: 6379}
-#       args: [--save, "60", "1"]
-#       strategy: {type: Recreate}
-#       volumes: [{name: data, persistentVolumeClaim: {claimName: docs-redis}}]
-#       volumeMounts: [{name: data, mountPath: /data}]
-#       probes: {readiness: {initialDelaySeconds: 5}, liveness: {initialDelaySeconds: 15}}
-#
-# Keys of a component: image {repository, tag, pullPolicy}, imagePullSecret, replicas, port, portName,
-# service {enabled, port}, strategy, probes, resources, env, secrets, command, args, podSecurityContext,
-# volumes, volumeMounts.
-components: {}
-

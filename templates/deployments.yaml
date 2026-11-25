@@ -1,0 +1,10 @@
+{{- /* A Deployment and its Service for each entry of `deployments` (see _deployments.tpl). */ -}}
+{{- $root := . }}
+{{- range $d := (include "generik.deployments" . | fromJsonArray) }}
+---
+{{ include "generik.deployment" (dict "root" $root "d" $d) }}
+{{- if $d.service.enabled }}
+---
+{{ include "generik.service" (dict "root" $root "d" $d) }}
+{{- end }}
+{{- end }}

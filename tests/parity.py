@@ -21,8 +21,8 @@ EXPECTED = {
     ("api", "IngressRoute", "api-block-registrations"): {"": "only in the old chart: Traefik objects that move to a file next to the App"},
     ("api", "Middleware", "api-block-registrations"): {"": "only in the old chart: Traefik objects that move to a file next to the App"},
     ("docs", "SopsSecret", "docs-secrets"): {"": "only in the old chart: the SopsSecret moves to a file next to the App"},
-    ("docs", "PersistentVolumeClaim", "docs-uploads"): {"": "only in the old chart: the claim moves to a file next to the App (its data stays)"},
-    ("docs", "PersistentVolumeClaim", "docs-redis"): {"": "only in the old chart: the claim moves to a file next to the App (its data stays)"},
+    ("docs", "PersistentVolumeClaim", "docs-uploads"): {".metadata.annotations": "generik protects a claim: ArgoCD never prunes nor deletes it, Helm keeps it"},
+    ("docs", "PersistentVolumeClaim", "docs-redis"): {".metadata.annotations": "generik protects a claim: ArgoCD never prunes nor deletes it, Helm keeps it"},
     ("docs", "Ingress", "docs"): {
         ".spec.rules[0].http.paths[0].backend.service.port.number": "the old chart addresses the collaboration Service by port name http, generik by number 80: the same port",
         ".spec.rules[0].http.paths[0].backend.service.port.name": "see port.number"},

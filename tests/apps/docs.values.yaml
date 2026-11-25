@@ -1,39 +1,8 @@
 name: docs
-image: {repository: outlinewiki/outline, tag: 1.10.1}
-imagePullSecret: ''
-strategy: {type: Recreate}
-podSecurityContext: {fsGroup: 1001}
-resources:
-  requests: {cpu: 50m, memory: 256Mi}
-  limits: {memory: 512Mi}
-probes:
-  readiness: {initialDelaySeconds: 20, timeoutSeconds: 5}
-  liveness: {initialDelaySeconds: 30, timeoutSeconds: 5}
-env:
-- {name: URL, value: 'https://docs.xdew.cloud'}
-- {name: SERVICES, value: 'web,websockets,worker'}
-- {name: WEB_CONCURRENCY, value: '1'}
-- {name: COLLABORATION_URL, value: 'wss://docs.xdew.cloud/collaboration'}
-- {name: FILE_STORAGE, value: local}
-- {name: FILE_STORAGE_LOCAL_ROOT_DIR, value: /var/lib/outline/data}
-- {name: REDIS_URL, value: 'redis://docs-redis:6379'}
-- {name: OIDC_DISPLAY_NAME, value: XDEW}
-- {name: OIDC_AUTH_URI, value: 'https://auth.xdew.cloud/oauth2/auth'}
-- {name: OIDC_TOKEN_URI, value: 'https://auth.xdew.cloud/oauth2/token'}
-- {name: OIDC_USERINFO_URI, value: 'https://auth.xdew.cloud/userinfo'}
-- {name: OIDC_USERNAME_CLAIM, value: preferred_username}
-- {name: OIDC_SCOPES, value: openid profile email}
-secrets: true
-volumes:
-- name: uploads
-  persistentVolumeClaim: {claimName: docs-uploads}
-volumeMounts:
-- {name: uploads, mountPath: /var/lib/outline/data}
 ingress:
   host: docs.xdew.cloud
   extraPaths:
-  - {path: /collaboration, service: docs-collaboration, port: 80}
-dns: {target: origin.xdew.cloud, proxied: true}
+  - {path: /collaboration, service: collaboration, port: 80}
 oauth2:
   enabled: true
   clientName: Docs
@@ -42,37 +11,66 @@ oauth2:
   tokenEndpointAuthMethod: client_secret_post
   clientIdEnv: OIDC_CLIENT_ID
   clientSecretEnv: OIDC_CLIENT_SECRET
-components:
-  collaboration:
-    resources:
-      requests: {cpu: 50m, memory: 192Mi}
-      limits: {memory: 384Mi}
-    probes:
-      readiness: {initialDelaySeconds: 20, timeoutSeconds: 5}
-      liveness: {initialDelaySeconds: 30, timeoutSeconds: 5}
-    env:
-    - {name: URL, value: 'https://docs.xdew.cloud'}
-    - {name: SERVICES, value: collaboration}
-    - {name: WEB_CONCURRENCY, value: '1'}
-    - {name: REDIS_URL, value: 'redis://docs-redis:6379'}
-    secrets: true
-    imagePullSecret: ''
-  redis:
-    image: {repository: redis, tag: 7-alpine, pullPolicy: IfNotPresent}
-    imagePullSecret: ''
-    port: 6379
-    portName: redis
-    service: {port: 6379}
-    args: [--save, '60', '1']
-    strategy: {type: Recreate}
-    resources:
-      requests: {cpu: 10m, memory: 32Mi}
-      limits: {memory: 128Mi}
-    probes:
-      readiness: {initialDelaySeconds: 5, timeoutSeconds: 5}
-      liveness: {initialDelaySeconds: 15, timeoutSeconds: 5}
-    volumes:
-    - name: data
-      persistentVolumeClaim: {claimName: docs-redis}
-    volumeMounts:
-    - {name: data, mountPath: /data}
+dns: {target: origin.xdew.cloud, proxied: true}
+deployments:
+- image: {repository: outlinewiki/outline, tag: 1.10.1}
+  imagePullSecret: ''
+  strategy: {type: Recreate}
+  podSecurityContext: {fsGroup: 1001}
+  resources:
+    requests: {cpu: 50m, memory: 256Mi}
+    limits: {memory: 512Mi}
+  probes:
+    readiness: {initialDelaySeconds: 20, timeoutSeconds: 5}
+    liveness: {initialDelaySeconds: 30, timeoutSeconds: 5}
+  secrets: true
+  env:
+  - {name: URL, value: 'https://docs.xdew.cloud'}
+  - {name: SERVICES, value: 'web,websockets,worker'}
+  - {name: WEB_CONCURRENCY, value: '1'}
+  - {name: COLLABORATION_URL, value: 'wss://docs.xdew.cloud/collaboration'}
+  - {name: FILE_STORAGE, value: local}
+  - {name: FILE_STORAGE_LOCAL_ROOT_DIR, value: /var/lib/outline/data}
+  - {name: REDIS_URL, value: 'redis://docs-redis:6379'}
+  - {name: OIDC_DISPLAY_NAME, value: XDEW}
+  - {name: OIDC_AUTH_URI, value: 'https://auth.xdew.cloud/oauth2/auth'}
+  - {name: OIDC_TOKEN_URI, value: 'https://auth.xdew.cloud/oauth2/token'}
+  - {name: OIDC_USERINFO_URI, value: 'https://auth.xdew.cloud/userinfo'}
+  - {name: OIDC_USERNAME_CLAIM, value: preferred_username}
+  - {name: OIDC_SCOPES, value: openid profile email}
+  volumes:
+  - name: uploads
+    mountPath: /var/lib/outline/data
+    claim: {name: docs-uploads, size: 10Gi, storageClass: xdew-storage}
+- name: collaboration
+  imagePullSecret: ''
+  resources:
+    requests: {cpu: 50m, memory: 192Mi}
+    limits: {memory: 384Mi}
+  probes:
+    readiness: {initialDelaySeconds: 20, timeoutSeconds: 5}
+    liveness: {initialDelaySeconds: 30, timeoutSeconds: 5}
+  secrets: true
+  env:
+  - {name: URL, value: 'https://docs.xdew.cloud'}
+  - {name: SERVICES, value: collaboration}
+  - {name: WEB_CONCURRENCY, value: '1'}
+  - {name: REDIS_URL, value: 'redis://docs-redis:6379'}
+- name: redis
+  image: {repository: redis, tag: 7-alpine, pullPolicy: IfNotPresent}
+  imagePullSecret: ''
+  port: 6379
+  portName: redis
+  service: {port: 6379}
+  strategy: {type: Recreate}
+  args: [--save, '60', '1']
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
+  probes:
+    readiness: {initialDelaySeconds: 5, timeoutSeconds: 5}
+    liveness: {initialDelaySeconds: 15, timeoutSeconds: 5}
+  volumes:
+  - name: data
+    mountPath: /data
+    claim: {name: docs-redis, size: 1Gi, storageClass: xdew-storage}

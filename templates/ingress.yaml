@@ -1,5 +1,10 @@
 {{- $name := include "generik.name" . }}
 {{- $hosts := include "generik.sharedHosts" . | fromJsonArray }}
+{{- /* The app is the first entry. A path names the entry that serves it (by its `name`), or any other Service as written. */ -}}
+{{- $entries := include "generik.deployments" . | fromJsonArray }}
+{{- $main := index $entries 0 }}
+{{- $objects := dict }}
+{{- range $entries }}{{- if .name }}{{- $_ := set $objects .name .object }}{{- end }}{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -30,7 +35,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ .service }}
+                name: {{ get $objects .service | default .service }}
                 port:
                   number: {{ .port }}
           {{- end }}
@@ -39,7 +44,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $name }}
+                name: {{ $main.object }}
                 port:
-                  name: http
+                  name: {{ $main.portName }}
     {{- end }}

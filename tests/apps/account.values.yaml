@@ -1,13 +1,14 @@
 name: account
-image: {repository: ghcr.io/xdew-cloud/account, tag: 1.0.2}
 ingress: {host: account.xdew.cloud}
-secrets: true
-env:
-  - {name: API_URL, value: "http://api:3000"}
-  - {name: AUTH_URL, value: "https://account.xdew.cloud"}
-  - {name: IDENTITY_ISSUER, value: "https://auth.xdew.cloud"}
-  - {name: NEXT_PUBLIC_ORY_SDK_URL, value: "https://auth.xdew.cloud"}
-  - {name: NEXT_PUBLIC_ORY_LOGIN_URL, value: "https://login.xdew.cloud"}
 oauth2:
   enabled: true
   clientName: Account
+deployments:
+  - image: {repository: ghcr.io/xdew-cloud/account, tag: 1.0.2}
+    secrets: true
+    env:
+      - {name: API_URL, value: "http://api:3000"}
+      - {name: AUTH_URL, value: "https://account.xdew.cloud"}
+      - {name: IDENTITY_ISSUER, value: "https://auth.xdew.cloud"}
+      - {name: NEXT_PUBLIC_ORY_SDK_URL, value: "https://auth.xdew.cloud"}
+      - {name: NEXT_PUBLIC_ORY_LOGIN_URL, value: "https://login.xdew.cloud"}

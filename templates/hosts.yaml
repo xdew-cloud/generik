@@ -6,6 +6,7 @@
 */ -}}
 {{- $root := . }}
 {{- $name := include "generik.name" . }}
+{{- $main := index (include "generik.deployments" . | fromJsonArray) 0 }}
 {{- range .Values.ingress.extraHosts }}
 {{- if and (kindIs "map" .) .middleware }}
 {{- $res := printf "%s-%s" $name (.name | default (.host | replace "." "-")) }}
@@ -45,8 +46,8 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ $name }}
+                name: {{ $main.object }}
                 port:
-                  name: http
+                  name: {{ $main.portName }}
 {{- end }}
 {{- end }}

@@ -1,7 +1,5 @@
 name: explore
-image: {repository: ghcr.io/xdew-cloud/explore, tag: 0.1.0}
 ingress: {host: explore.xdew.cloud}
-secrets: true
 serviceAccount: {create: true}
 rbac:
   clusterRules:
@@ -18,9 +16,12 @@ rbac:
     - apiGroups: ["rbac.authorization.k8s.io"]
       resources: ["rolebindings"]
       verbs: ["get", "list", "watch"]
-env:
-  - {name: AUTH_URL, value: "https://explore.xdew.cloud"}
-  - {name: IDENTITY_ISSUER, value: "https://auth.xdew.cloud"}
 oauth2:
   enabled: true
   clientName: Explore
+deployments:
+  - image: {repository: ghcr.io/xdew-cloud/explore, tag: 0.1.0}
+    secrets: true
+    env:
+      - {name: AUTH_URL, value: "https://explore.xdew.cloud"}
+      - {name: IDENTITY_ISSUER, value: "https://auth.xdew.cloud"}

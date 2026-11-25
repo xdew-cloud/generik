@@ -1,20 +1,10 @@
 {{- /*
-  One Deployment, for the app and for each of its components. Called with a dict:
-    root               the chart context
-    name               name of the Deployment
-    container          name of the container
-    component          app.kubernetes.io/component of the pods, or "" (the app alone has none)
-    selectByComponent  true when the selector holds the component too (a component), false for the app
-    serviceAccount     true when the pods run as the ServiceAccount of the release
-    secrets            true when the container reads <release>-secrets
-    env                the environment, a list in Kubernetes syntax
-    w                  the workload: image, replicas, port, portName, strategy, probes, resources,
-                       imagePullSecret, podSecurityContext, volumes, volumeMounts, command, args
+  One Deployment. Called with root (the chart context) and d, one resolved entry of generik.deployments.
 */ -}}
 {{- define "generik.deployment" -}}
 {{- $root := .root -}}
-{{- $w := .w -}}
-{{- $strategy := $w.strategy | default dict -}}
+{{- $d := .d -}}
+{{- $strategy := $d.strategy | default dict -}}
 {{- $type := $strategy.type | default "RollingUpdate" -}}
 {{- $rolling := dict -}}
 {{- range $key := list "maxUnavailable" "maxSurge" -}}
@@ -25,15 +15,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .name }}
+  name: {{ $d.object }}
   namespace: {{ $root.Release.Namespace }}
   labels:
-    {{- include "generik.labelsOf" (dict "root" $root "version" $w.image.tag) | nindent 4 }}
-    {{- with .component }}
+    {{- include "generik.labelsOf" (dict "root" $root "version" $d.image.tag) | nindent 4 }}
+    {{- with $d.component }}
     app.kubernetes.io/component: {{ . }}
     {{- end }}
 spec:
-  replicas: {{ $w.replicas }}
+  replicas: {{ $d.replicas | int }}
   strategy:
     type: {{ $type }}
     {{- if and (eq $type "RollingUpdate") $rolling }}
@@ -43,97 +33,98 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "generik.name" $root }}
-      {{- if .selectByComponent }}
-      app.kubernetes.io/component: {{ .component }}
+      {{- if $d.selectByComponent }}
+      app.kubernetes.io/component: {{ $d.component }}
       {{- end }}
   template:
     metadata:
       labels:
-        {{- include "generik.labelsOf" (dict "root" $root "version" $w.image.tag) | nindent 8 }}
-        {{- with .component }}
+        {{- include "generik.labelsOf" (dict "root" $root "version" $d.image.tag) | nindent 8 }}
+        {{- with $d.component }}
         app.kubernetes.io/component: {{ . }}
         {{- end }}
     spec:
-      {{- if .serviceAccount }}
+      {{- if $d.serviceAccount }}
       serviceAccountName: {{ include "generik.name" $root }}
       {{- end }}
-      {{- with $w.podSecurityContext }}
+      {{- with $d.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with $w.imagePullSecret }}
+      {{- with $d.imagePullSecret }}
       imagePullSecrets:
         - name: {{ . }}
       {{- end }}
-      {{- with $w.volumes }}
+      {{- with $d.volumes }}
       volumes:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: {{ .container }}
-          image: "{{ $w.image.repository }}:{{ $w.image.tag }}"
-          imagePullPolicy: {{ $w.image.pullPolicy }}
-          {{- with $w.command }}
+        - name: {{ $d.container }}
+          image: "{{ $d.image.repository }}:{{ $d.image.tag }}"
+          imagePullPolicy: {{ $d.image.pullPolicy }}
+          {{- with $d.command }}
           command:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with $w.args }}
+          {{- with $d.args }}
           args:
             {{- toYaml . | nindent 12 }}
           {{- end }}
           ports:
-            - name: {{ $w.portName }}
-              containerPort: {{ $w.port }}
-          {{- with .env }}
+            - name: {{ $d.portName }}
+              containerPort: {{ $d.port | int }}
+          {{- with $d.env }}
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .secrets }}
+          {{- if $d.secrets }}
           envFrom:
             - secretRef:
                 name: {{ include "generik.name" $root }}-secrets
           {{- end }}
           resources:
             requests:
-              cpu: {{ $w.resources.requests.cpu }}
-              memory: {{ $w.resources.requests.memory }}
+              cpu: {{ $d.resources.requests.cpu }}
+              memory: {{ $d.resources.requests.memory }}
             limits:
-              memory: {{ $w.resources.limits.memory }}
+              memory: {{ $d.resources.limits.memory }}
           readinessProbe:
             tcpSocket:
-              port: {{ $w.portName }}
-            {{- include "generik.probe" $w.probes.readiness | nindent 12 }}
+              port: {{ $d.portName }}
+            {{- toYaml $d.probes.readiness | nindent 12 }}
           livenessProbe:
             tcpSocket:
-              port: {{ $w.portName }}
-            {{- include "generik.probe" $w.probes.liveness | nindent 12 }}
-          {{- with $w.volumeMounts }}
+              port: {{ $d.portName }}
+            {{- toYaml $d.probes.liveness | nindent 12 }}
+          {{- with $d.volumeMounts }}
           volumeMounts:
             {{- toYaml . | nindent 12 }}
           {{- end }}
 {{- end }}
 
-{{- /* A Service. Called with root, name, component, version, portName and port. */ -}}
+{{- /* The Service of a Deployment. Called with root and d. */ -}}
 {{- define "generik.service" -}}
+{{- $d := .d -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .name }}
+  name: {{ $d.object }}
   namespace: {{ .root.Release.Namespace }}
   labels:
-    {{- include "generik.labelsOf" (dict "root" .root "version" .version) | nindent 4 }}
-    {{- with .component }}
+    {{- include "generik.labelsOf" (dict "root" .root "version" $d.image.tag) | nindent 4 }}
+    {{- with $d.component }}
     app.kubernetes.io/component: {{ . }}
     {{- end }}
 spec:
   selector:
     app.kubernetes.io/name: {{ include "generik.name" .root }}
-    {{- with .component }}
+    {{- with $d.component }}
     app.kubernetes.io/component: {{ . }}
     {{- end }}
   ports:
-    - name: {{ .portName }}
+    - name: {{ $d.portName }}
       protocol: TCP
-      port: {{ .port }}
-      targetPort: {{ .portName }}
+      port: {{ $d.service.port | int }}
+      targetPort: {{ $d.portName }}
 {{- end }}

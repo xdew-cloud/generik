@@ -1,2 +1,0 @@
-{{- $component := ternary "web" "" (not (empty .Values.components)) }}
-{{ include "generik.service" (dict "root" . "name" (include "generik.name" .) "component" $component "version" .Values.image.tag "portName" "http" "port" .Values.service.port) }}
