@@ -44,7 +44,7 @@ The complete values of the seven apps are in [tests/apps](tests/apps).
 | `podSecurityContext`, `volumes`, `volumeMounts` | empty | Kubernetes syntax. The claim a volume uses is a file next to the App |
 | `probes.readiness`, `probes.liveness` | 10 s / 15 s delay, 5 s timeout | TCP probes on `http`. Every key is passed as is; `null` removes a default |
 | `resources` | 25m / 128Mi, limit 256Mi | |
-| `env` | `[]` | Kubernetes syntax (`name` + `value`, or `valueFrom`) |
+| `env` | `[]` | Kubernetes syntax (`name` + `value`, or `valueFrom`, see Settings from another Secret) |
 | `secrets` | `false` | `true`: the container reads the Secret `<name>-secrets` (`envFrom`) |
 | `serviceAccount.create` | `false` | |
 | `rbac.clusterRules` | `[]` | Rules of a ClusterRole bound to the ServiceAccount |
@@ -79,6 +79,23 @@ ingress:
 ```
 
 Every host has a DNS record. The paths of `ingress.extraPaths` apply to the main host only.
+
+## Settings from another Secret
+
+`secrets: true` hands the whole Secret `<name>-secrets` to the container. A setting that lives in a Secret of its own, under a key that is not the variable's name, is an `env` entry with `valueFrom`. `optional: true` lets the pod start without the key, so the app works with or without it. The same goes for the rights an app needs on its own resources (`rbac.clusterRules`, a status is its own resource, `versions/status`):
+
+```yaml
+env:
+  - name: GITHUB_APP_ID
+    valueFrom:
+      secretKeyRef: {name: xdew-cloud-github-app, key: appId, optional: true}
+rbac:
+  clusterRules:
+    - {apiGroups: [xdew.cloud], resources: [versions], verbs: [get, list, create, delete]}
+    - {apiGroups: [xdew.cloud], resources: [versions/status], verbs: [get, patch]}
+```
+
+The `api` of the platform does exactly this for its GitHub App (the Secret is a file next to the App); `tests/cases/secretenv.values.yaml` renders it.
 
 ## Components
 
