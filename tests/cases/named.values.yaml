@@ -1,0 +1,19 @@
+# Every entry has a name (docs-web, docs-collaboration, docs-cache), claims with and without a name, a class, access
+# modes, and a volume that is not a claim. Paths name an entry, or any other Service.
+name: docs
+ingress:
+  host: docs.example.org
+  extraPaths:
+    - {path: /collaboration, service: collaboration, port: 80}
+    - {path: /self-service, service: kratos-public, port: 80}
+deployments:
+  - name: web
+    image: {repository: ghcr.io/example/docs, tag: 1.10.1}
+    volumes:
+      - {name: uploads, mountPath: /data, claim: {size: 5Gi}}
+  - name: collaboration
+  - name: cache
+    imagePullSecret: ""
+    volumes:
+      - {name: data, mountPath: /cache, subPath: docs, claim: {name: docs-cache, size: 1Gi, storageClass: fast, accessModes: [ReadWriteMany]}}
+      - {name: tmp, mountPath: /tmp, emptyDir: {}}

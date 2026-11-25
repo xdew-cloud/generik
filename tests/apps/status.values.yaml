@@ -1,4 +1,5 @@
 name: status
-image: {repository: ghcr.io/xdew-cloud/status, tag: 0.2.0}
-resources: {requests: {cpu: 10m, memory: 64Mi}, limits: {memory: 128Mi}}
 ingress: {host: status.xdew.cloud}
+deployments:
+  - image: {repository: ghcr.io/xdew-cloud/status, tag: 0.2.0}
+    resources: {requests: {cpu: 10m, memory: 64Mi}, limits: {memory: 128Mi}}

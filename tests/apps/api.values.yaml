@@ -1,9 +1,11 @@
 name: api
-image: {repository: ghcr.io/xdew-cloud/api, tag: 3.5.0}
-service: {port: 3000}
-resources:
-  requests: {cpu: 50m, memory: 128Mi}
-  limits: {memory: 256Mi}
+ingress:
+  host: api.xdew.cloud
+  extraHosts:
+  - host: webhook.xdew.cloud
+    name: webhook
+    middleware:
+      addPrefix: {prefix: /webhook}
 serviceAccount: {create: true}
 rbac:
   clusterRules:
@@ -64,22 +66,6 @@ rbac:
   - apiGroups: [hydra.ory.sh]
     resources: [oauth2clients]
     verbs: [get, list]
-env:
-- {name: NODE_ENV, value: production}
-- {name: HYDRA_ADMIN_URL, value: 'http://hydra-admin.system-identity-apps.svc.cluster.local:4445'}
-- {name: KETO_READ_URL, value: 'http://keto-read.system-identity-apps.svc.cluster.local:80'}
-- {name: USER_SA_NAMESPACE, value: system-identity-operators}
-- {name: PROMETHEUS_URL, value: 'http://obs-prometheus.system-operators-observability.svc.cluster.local:9090'}
-- {name: HYDRA_AUDIENCE, value: api}
-- {name: HYDRA_AUDIENCE_ENFORCE, value: log}
-ingress:
-  host: api.xdew.cloud
-  extraHosts:
-  - host: webhook.xdew.cloud
-    name: webhook
-    middleware:
-      addPrefix: {prefix: /webhook}
-dns: {target: origin.xdew.cloud, proxied: true}
 oauth2:
   enabled: true
   clientName: API
@@ -90,3 +76,18 @@ oauth2:
   tokenEndpointAuthMethod: client_secret_basic
   clientIdEnv: HYDRA_API_CLIENT_ID
   clientSecretEnv: HYDRA_API_CLIENT_SECRET
+dns: {target: origin.xdew.cloud, proxied: true}
+deployments:
+- image: {repository: ghcr.io/xdew-cloud/api, tag: 3.5.0}
+  service: {port: 3000}
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 256Mi}
+  env:
+  - {name: NODE_ENV, value: production}
+  - {name: HYDRA_ADMIN_URL, value: 'http://hydra-admin.system-identity-apps.svc.cluster.local:4445'}
+  - {name: KETO_READ_URL, value: 'http://keto-read.system-identity-apps.svc.cluster.local:80'}
+  - {name: USER_SA_NAMESPACE, value: system-identity-operators}
+  - {name: PROMETHEUS_URL, value: 'http://obs-prometheus.system-operators-observability.svc.cluster.local:9090'}
+  - {name: HYDRA_AUDIENCE, value: api}
+  - {name: HYDRA_AUDIENCE_ENFORCE, value: log}

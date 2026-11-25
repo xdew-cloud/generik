@@ -2,83 +2,123 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": false,
-  "required": ["image", "ingress"],
+  "required": [
+    "deployments",
+    "ingress"
+  ],
   "properties": {
-    "name": {"type": "string"},
-    "image": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["repository", "tag"],
-      "properties": {
-        "repository": {"type": "string", "minLength": 1},
-        "tag": {"type": "string", "minLength": 1},
-        "pullPolicy": {"type": "string", "enum": ["Always", "IfNotPresent", "Never"]}
+    "name": {
+      "type": "string"
+    },
+    "deployments": {
+      "type": "array",
+      "minItems": 1,
+      "items": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/definitions/deployment"
+            },
+            {
+              "required": [
+                "image"
+              ]
+            }
+          ]
+        }
+      ],
+      "additionalItems": {
+        "$ref": "#/definitions/deployment"
       }
     },
-    "imagePullSecret": {"type": "string"},
-    "replicas": {"type": "integer", "minimum": 0},
-    "port": {"$ref": "#/definitions/port"},
-    "service": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {"port": {"$ref": "#/definitions/port"}}
-    },
-    "strategy": {"$ref": "#/definitions/strategy"},
-    "command": {"$ref": "#/definitions/strings"},
-    "args": {"$ref": "#/definitions/strings"},
-    "podSecurityContext": {"type": "object"},
-    "volumes": {"$ref": "#/definitions/objects"},
-    "volumeMounts": {"$ref": "#/definitions/objects"},
-    "probes": {"$ref": "#/definitions/probes"},
-    "resources": {"$ref": "#/definitions/resources"},
-    "env": {"$ref": "#/definitions/env"},
-    "secrets": {"type": "boolean"},
     "serviceAccount": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {"create": {"type": "boolean"}}
+      "properties": {
+        "create": {
+          "type": "boolean"
+        }
+      }
     },
     "rbac": {
       "type": "object",
       "additionalProperties": false,
-      "properties": {"clusterRules": {"type": "array", "items": {"type": "object"}}}
+      "properties": {
+        "clusterRules": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
     },
     "ingress": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["host"],
+      "required": [
+        "host"
+      ],
       "properties": {
-        "host": {"type": "string", "minLength": 1},
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
         "extraHosts": {
           "type": "array",
           "items": {
             "oneOf": [
-              {"type": "string"},
+              {
+                "type": "string"
+              },
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["host"],
+                "required": [
+                  "host"
+                ],
                 "properties": {
-                  "host": {"type": "string", "minLength": 1},
-                  "name": {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"},
-                  "middleware": {"type": "object"}
+                  "host": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  "middleware": {
+                    "type": "object"
+                  }
                 }
               }
             ]
           }
         },
-        "className": {"type": "string"},
-        "clusterIssuer": {"type": "string"},
+        "className": {
+          "type": "string"
+        },
+        "clusterIssuer": {
+          "type": "string"
+        },
         "extraPaths": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["path", "service", "port"],
+            "required": [
+              "path",
+              "service",
+              "port"
+            ],
             "properties": {
-              "path": {"type": "string"},
-              "service": {"type": "string"},
-              "port": {"type": "integer"}
+              "path": {
+                "type": "string"
+              },
+              "service": {
+                "type": "string"
+              },
+              "port": {
+                "type": "integer"
+              }
             }
           }
         }
@@ -88,88 +128,123 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": {"type": "boolean"},
-        "target": {"type": "string"},
-        "proxied": {"type": "boolean"}
+        "enabled": {
+          "type": "boolean"
+        },
+        "target": {
+          "type": "string"
+        },
+        "proxied": {
+          "type": "boolean"
+        }
       }
     },
     "oauth2": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": {"type": "boolean"},
-        "clientName": {"type": "string"},
-        "audience": {"type": "string"},
-        "scope": {"type": "string"},
+        "enabled": {
+          "type": "boolean"
+        },
+        "clientName": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
         "grantTypes": {
           "type": "array",
           "minItems": 1,
-          "items": {"enum": ["authorization_code", "refresh_token", "client_credentials", "implicit", "urn:ietf:params:oauth:grant-type:device_code"]}
+          "items": {
+            "enum": [
+              "authorization_code",
+              "refresh_token",
+              "client_credentials",
+              "implicit",
+              "urn:ietf:params:oauth:grant-type:device_code"
+            ]
+          }
         },
-        "responseTypes": {"type": "array", "items": {"type": "string"}},
-        "tokenEndpointAuthMethod": {"enum": ["client_secret_basic", "client_secret_post", "private_key_jwt", "none"]},
-        "clientIdEnv": {"type": "string", "minLength": 1},
-        "clientSecretEnv": {"type": "string", "minLength": 1},
-        "redirectPaths": {"type": "array", "items": {"type": "string"}}
-      }
-    },
-    "components": {
-      "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "image": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "repository": {"type": "string", "minLength": 1},
-              "tag": {"type": "string", "minLength": 1},
-              "pullPolicy": {"type": "string", "enum": ["Always", "IfNotPresent", "Never"]}
-            }
-          },
-          "imagePullSecret": {"type": "string"},
-          "replicas": {"type": "integer", "minimum": 0},
-          "port": {"$ref": "#/definitions/port"},
-          "portName": {"type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$", "maxLength": 15},
-          "service": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {"enabled": {"type": "boolean"}, "port": {"$ref": "#/definitions/port"}}
-          },
-          "strategy": {"$ref": "#/definitions/strategy"},
-          "probes": {"$ref": "#/definitions/probes"},
-          "resources": {"$ref": "#/definitions/resources"},
-          "env": {"$ref": "#/definitions/env"},
-          "secrets": {"type": "boolean"},
-          "command": {"$ref": "#/definitions/strings"},
-          "args": {"$ref": "#/definitions/strings"},
-          "podSecurityContext": {"type": "object"},
-          "volumes": {"$ref": "#/definitions/objects"},
-          "volumeMounts": {"$ref": "#/definitions/objects"}
+        "responseTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tokenEndpointAuthMethod": {
+          "enum": [
+            "client_secret_basic",
+            "client_secret_post",
+            "private_key_jwt",
+            "none"
+          ]
+        },
+        "clientIdEnv": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientSecretEnv": {
+          "type": "string",
+          "minLength": 1
+        },
+        "redirectPaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     }
   },
   "definitions": {
-    "port": {"type": "integer", "minimum": 1, "maximum": 65535},
-    "strings": {"type": "array", "items": {"type": "string"}},
-    "objects": {"type": "array", "items": {"type": "object"}},
+    "port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "strategy": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "type": {"enum": ["RollingUpdate", "Recreate"]},
-        "maxUnavailable": {"type": ["integer", "string"]},
-        "maxSurge": {"type": ["integer", "string"]}
+        "type": {
+          "enum": [
+            "RollingUpdate",
+            "Recreate"
+          ]
+        },
+        "maxUnavailable": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        },
+        "maxSurge": {
+          "type": [
+            "integer",
+            "string"
+          ]
+        }
       }
     },
     "probes": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "readiness": {"type": "object"},
-        "liveness": {"type": "object"}
+        "readiness": {
+          "type": "object"
+        },
+        "liveness": {
+          "type": "object"
+        }
       }
     },
     "resources": {
@@ -179,18 +254,186 @@
         "requests": {
           "type": "object",
           "additionalProperties": false,
-          "properties": {"cpu": {"type": "string"}, "memory": {"type": "string"}}
+          "properties": {
+            "cpu": {
+              "type": "string"
+            },
+            "memory": {
+              "type": "string"
+            }
+          }
         },
         "limits": {
           "type": "object",
           "additionalProperties": false,
-          "properties": {"memory": {"type": "string"}}
+          "properties": {
+            "memory": {
+              "type": "string"
+            }
+          }
         }
       }
     },
     "env": {
       "type": "array",
-      "items": {"type": "object", "required": ["name"]}
+      "items": {
+        "type": "object",
+        "required": [
+          "name"
+        ]
+      }
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "tag"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
+        }
+      }
+    },
+    "volume": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        },
+        "mountPath": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "subPath": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "claim": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "size"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+              "maxLength": 253
+            },
+            "size": {
+              "type": "string",
+              "pattern": "^[0-9]+(\\.[0-9]+)?(Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+            },
+            "storageClass": {
+              "type": "string"
+            },
+            "accessModes": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "enum": [
+                  "ReadWriteOnce",
+                  "ReadOnlyMany",
+                  "ReadWriteMany",
+                  "ReadWriteOncePod"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 40
+        },
+        "image": {
+          "$ref": "#/definitions/image"
+        },
+        "imagePullSecret": {
+          "type": "string"
+        },
+        "replicas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "port": {
+          "$ref": "#/definitions/port"
+        },
+        "portName": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 15
+        },
+        "service": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "port": {
+              "$ref": "#/definitions/port"
+            }
+          }
+        },
+        "strategy": {
+          "$ref": "#/definitions/strategy"
+        },
+        "probes": {
+          "$ref": "#/definitions/probes"
+        },
+        "resources": {
+          "$ref": "#/definitions/resources"
+        },
+        "env": {
+          "$ref": "#/definitions/env"
+        },
+        "secrets": {
+          "type": "boolean"
+        },
+        "command": {
+          "$ref": "#/definitions/strings"
+        },
+        "args": {
+          "$ref": "#/definitions/strings"
+        },
+        "podSecurityContext": {
+          "type": "object"
+        },
+        "volumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/volume"
+          }
+        }
+      }
     }
   }
 }

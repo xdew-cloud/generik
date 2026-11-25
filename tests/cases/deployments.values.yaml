@@ -1,0 +1,19 @@
+# The first entry has no name (it is the app), a worker that inherits what it does not say, a Recreate app,
+# and a rolling update that stops at zero.
+name: jobs
+ingress: {host: jobs.example.org}
+deployments:
+  - image: {repository: ghcr.io/example/jobs, tag: 2.0.0}
+    strategy: {type: Recreate, maxUnavailable: 0}
+    service: {port: 8080}
+  - name: worker
+    env: [{name: MODE, value: worker}]
+  - name: queue
+    image: {repository: redis, tag: 7-alpine}
+    port: 6379
+    portName: redis
+    service: {port: 6379}
+    strategy: {maxUnavailable: 0, maxSurge: 0}
+  - name: internal
+    service: {enabled: false}
+    replicas: 0

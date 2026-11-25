@@ -1,6 +1,7 @@
 name: www
-image: {repository: ghcr.io/xdew-cloud/www, tag: 1.1.0}
-resources: {requests: {cpu: 10m, memory: 64Mi}, limits: {memory: 128Mi}}
 ingress:
   host: xdew.cloud
   extraHosts: [www.xdew.cloud]
+deployments:
+  - image: {repository: ghcr.io/xdew-cloud/www, tag: 1.1.0}
+    resources: {requests: {cpu: 10m, memory: 64Mi}, limits: {memory: 128Mi}}

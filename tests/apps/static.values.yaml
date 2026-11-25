@@ -1,5 +1,6 @@
 name: static
-image: {repository: ghcr.io/xdew-cloud/static, tag: 2.5.0}
-port: 80
-resources: {requests: {cpu: 10m, memory: 50Mi}, limits: {memory: 100Mi}}
 ingress: {host: static.xdew.cloud}
+deployments:
+  - image: {repository: ghcr.io/xdew-cloud/static, tag: 2.5.0}
+    port: 80
+    resources: {requests: {cpu: 10m, memory: 50Mi}, limits: {memory: 100Mi}}

@@ -1,0 +1,33 @@
+{{- /*
+  The PersistentVolumeClaims of the volumes that have a `claim`. They hold data, and the storage class deletes a volume
+  with its claim, so ArgoCD is told never to prune them nor to delete them with the Application, and Helm to keep them.
+  Taking a volume out of the values leaves its claim, and its data, where it is.
+*/ -}}
+{{- $root := . }}
+{{- range $d := (include "generik.deployments" . | fromJsonArray) }}
+{{- range $claim := $d.claims }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $claim.name }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "generik.labelsOf" (dict "root" $root "version" $d.image.tag) | nindent 4 }}
+    {{- with $d.component }}
+    app.kubernetes.io/component: {{ . }}
+    {{- end }}
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- toYaml $claim.accessModes | nindent 4 }}
+  {{- with $claim.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $claim.size }}
+{{- end }}
+{{- end }}
